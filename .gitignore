@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+
+*.orig
+*.log
+*.tgz
+*.temp.json
+
+.build/
+dist/
+node_modules/
+.vercel/
