@@ -1,52 +1,118 @@
 import {
-  BuildOptions,
   BuildResultV3,
+  BuildV3,
   debug,
   download,
-  EdgeFunction,
+  FileFsRef,
+  getLambdaOptionsFromFunction,
+  getProvidedRuntime,
+  glob,
   Lambda,
-} from "@vercel/build-utils";
-import { installSwiftToolchain } from "./lib/swift-toolchain";
-import { findSPMWorkspace } from "./lib/utils";
+  ShouldServe,
+  // shouldServe,
+} from '@vercel/build-utils';
+import { installSwiftToolchain } from './lib/swift-toolchain';
+import path from 'node:path';
+import { hasSwiftPM } from './lib/utils';
+import execa from 'execa';
+import { existsSync } from 'node:fs';
+import { generateRoutes } from './lib/routes';
 
-async function buildOptions(options: BuildOptions): Promise<BuildResultV3> {
+// In order to allow the user to have `main.swift`, we need our
+// `main.swift` to be called something else
+// const MAIN_SWIFT_FILENAME = '__vc_main_swift.swift';
+const HANDLER_FILENAME = 'bootstrap';
+
+export const version = 3;
+
+export const build: BuildV3 = async ({
+  workPath,
+  files: originalFiles,
+  entrypoint,
+  meta = {},
+  config,
+}): Promise<BuildResultV3> => {
   const BUILDER_DEBUG = Boolean(process.env.VERCEL_BUILDER_DEBUG ?? false);
-  const { files, entrypoint, workPath, config, meta } = options;
-
   await installSwiftToolchain();
 
-  debug("Creating file system");
-  const downloadedFiles = await download(files, workPath, meta);
-  const entryPath = downloadedFiles[entrypoint].fsPath;
+  debug('Entrypoint is', entrypoint);
 
-  const spmWorkspace = await findSPMWorkspace();
-
-  const isLambda = false;
-  let output: Lambda | EdgeFunction;
-
-  if (isLambda) {
-    output = new Lambda({
-      files: {},
-      handler: "index.swift",
-      runtime: "swift",
-    });
-  } else {
-    output = new EdgeFunction({
-      files: {},
-      deploymentTarget: "v8-worker",
-      entrypoint: "",
-    });
+  if (!(await hasSwiftPM(workPath))) {
+    throw new Error(
+      `This directory does not have Swift Package Manager's \`Package.swift\` file.`,
+    );
   }
 
-  return {
-    routes: [],
-    output: output,
-  };
-}
+  debug('Creating file system');
+  const downloadedFiles = await download(originalFiles, workPath, meta);
+  const entryPath = downloadedFiles[entrypoint].fsPath;
 
-const runtime = {
-  version: 3,
-  build: buildOptions,
+  try {
+    await execa(
+      'swift',
+      ['build'].concat(!BUILDER_DEBUG ? ['-c', 'release'] : ['--verbose']),
+      {
+        cwd: workPath,
+        stdin: 'inherit',
+      },
+    );
+  } catch (err) {
+    debug(
+      `Running \`swift build ${!BUILDER_DEBUG ? '-c release' : '--verbose'} \` failed`,
+    );
+    throw err;
+  }
+
+  const appExecutablePath = path.join(
+    workPath,
+    '.build',
+    BUILDER_DEBUG ? 'debug' : 'release',
+    'App',
+  );
+
+  if (!existsSync(appExecutablePath)) {
+    throw new Error(
+      'Failed to build `App` executable. Make sure `Package.swift` has `.executableTarget` and the target name is set to `App`.',
+    );
+  }
+
+  debug(`Building \`App\` for \`${process.platform}\` completed`);
+
+  const lambdaOptions = getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
+
+  const runtime = meta?.isDev ? 'provided' : await getProvidedRuntime();
+  const handlerFiles = await glob('api/**/[!(mM)ain][!(aA)pp]*.swift', workPath);
+  const routes = generateRoutes(Object.keys(handlerFiles));
+
+  let output: Lambda = new Lambda({
+    files: {
+      [HANDLER_FILENAME]: new FileFsRef({
+        mode: 0o755,
+        fsPath: appExecutablePath,
+      }),
+    },
+    handler: HANDLER_FILENAME,
+    // supportsWrapper: true,
+    runtime,
+    ...lambdaOptions,
+    // experimentalAllowBundling: true
+  });
+
+  return { 
+    output: output,
+    routes: routes.map((src, dest) => ({ src, dest }))
+  };
 };
 
-export const { version, build } = runtime;
+export const shouldServe: ShouldServe = async ({
+  requestPath,
+  entrypoint,
+}): Promise<boolean> => {
+  debug(`Requested ${requestPath} for ${entrypoint}`);
+  return Promise.resolve(entrypoint === 'api/main');
+};
+
+// export { shouldServe };

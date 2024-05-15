@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/main.swift": {
+      "runtime": "dgls-test-vercel-dev-builder@0.0.8"
+    }
+  }
+}
