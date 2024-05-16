@@ -1,3 +1,11 @@
+//
+//  Route.swift
+//
+//
+//  Created by ErrorErrorError on 5/15/24.
+//
+//
+
 public protocol Route {
   init()
   
@@ -6,5 +14,8 @@ public protocol Route {
 }
 
 extension Route {
-  var routePath: String { String(filePath.dropLast(6)) }
+  func routePath(base path: String) -> String {
+    String(filePath.dropLast(6))
+      .replacingOccurrences(of: path, with: "")
+  }
 }

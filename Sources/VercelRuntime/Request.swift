@@ -1,3 +1,11 @@
+//
+//  Request.swift
+//
+//
+//  Created by ErrorErrorError on 5/15/24.
+//
+//
+
 import AWSLambdaRuntime
 import HTTPTypes
 import Foundation
@@ -16,7 +24,7 @@ public struct Request: Sendable {
     self.headers = payload.headers
     self.path = payload.path
     
-    if let encoding = payload.encoding, let body = payload.body, encoding == "base64" {
+    if let encoding = payload.encoding, let body = payload.body, encoding == .base64 {
         rawBody = Data(base64Encoded: body)
     } else {
         rawBody = payload.body?.data(using: .utf8)
