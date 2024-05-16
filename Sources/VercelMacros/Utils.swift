@@ -18,13 +18,13 @@ extension MemberBlockItemListSyntax {
       return initializer.signature.parameterClause.parameters == params
     }
   }
-  
+
   func contains(property name: String) -> Bool {
     self.contains { syntax in
       guard let variable = syntax.decl.as(VariableDeclSyntax.self) else {
         return false
       }
-      
+
       let identifier = variable.bindings.compactMap { bind in
         bind.pattern.as(IdentifierPatternSyntax.self)
       }

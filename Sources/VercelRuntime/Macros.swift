@@ -1,9 +1,9 @@
 //
 //  Macros.swift
-//  
+//
 //
 //  Created by ErrorErrorError on 5/12/24.
-//  
+//
 //
 
 import VercelMacros

@@ -14,9 +14,9 @@ import NIOCore
 struct VercelRuntime<T: Routable>: @unchecked Sendable {
   typealias Event = VercelEvent
   typealias Output = Response
-  
+
   let routable: T
-  
+
   init(type: T.Type = T.self) {
     self.routable = type.init()
   }
@@ -28,7 +28,7 @@ extension VercelRuntime: EventLoopLambdaHandler {
       .init()
     }
   }
-  
+
   func handle(_ event: VercelEvent, context: LambdaContext) -> NIOCore.EventLoopFuture<Response> {
     context.eventLoop.makeFutureWithTask {
       let data = Data(event.body.utf8)

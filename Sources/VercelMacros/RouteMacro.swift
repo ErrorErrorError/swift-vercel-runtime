@@ -15,7 +15,7 @@ private enum ExtensionsMacroError: Swift.Error {
   case requiresClassOrStruct
 }
 
-struct RouteMacro {
+enum RouteMacro {
   static let package = "VercelRuntime"
   static let routeName = "Route"
   static let qualifiedRoute = "\(package).\(routeName)"
@@ -30,18 +30,18 @@ extension RouteMacro: ExtensionMacro {
     in context: some SwiftSyntaxMacros.MacroExpansionContext
   ) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
     if let inheritanceClause = declaration.inheritanceClause,
-      inheritanceClause.inheritedTypes.contains(
-        where: {
-          [routeName, qualifiedRoute].contains($0.type.trimmedDescription)
-        }
-      )
+       inheritanceClause.inheritedTypes.contains(
+         where: {
+           [routeName, qualifiedRoute].contains($0.type.trimmedDescription)
+         }
+       )
     {
       return []
     }
 
     let routableExtension: DeclSyntax = """
-      extension \(type.trimmed): \(raw: qualifiedRoute) {}
-      """
+    extension \(type.trimmed): \(raw: qualifiedRoute) {}
+    """
 
     guard let routable = routableExtension.as(ExtensionDeclSyntax.self) else {
       throw ExtensionsMacroError.failedToCast
@@ -66,15 +66,15 @@ extension RouteMacro: MemberMacro {
     let hasPublic = modifiers.contains { $0.name.tokenKind == .keyword(.public) }
 
     var syntax = [DeclSyntax]()
-    
+
     if !declaration.memberBlock.members.contains(property: "filePath") {
       syntax.append("\(raw: hasPublic ? "public " : "")let filePath = #filePath")
     }
-    
+
     if !declaration.memberBlock.members.contains(initializer: []) {
       syntax.append("\(raw: hasPublic ? "public " : "")init() {}")
     }
-    
+
     return syntax
   }
 }

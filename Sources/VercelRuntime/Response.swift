@@ -13,7 +13,7 @@ public struct Response: Sendable, Codable {
   public var headers: HTTPResponse.PseudoHeaderFields?
   public var body: String?
   public var encoding: VercelEvent.Payload.Encoding?
-  
+
   public init(
     statusCode: HTTPResponse.Status = .ok,
     headers: HTTPResponse.PseudoHeaderFields? = nil,
