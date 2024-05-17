@@ -5,12 +5,16 @@ import PackageDescription
 import CompilerPluginSupport
 
 let package = Package.init(
-  name: "VercelRuntime",
+  name: "swift-vercel-runtime",
   defaultLocalization: "en",
   platforms: [
     .macOS(.v13)
   ],
   products: [
+    .plugin(
+      name: "VercelRouterTool",
+      targets: ["VercelRouterTool"]
+    ),
     .library(
       name: "VercelRuntime",
       targets: ["VercelRuntime"]
@@ -23,6 +27,13 @@ let package = Package.init(
     .package(url: "https://github.com/pointfreeco/swift-macro-testing.git", from: "0.4.0"),
   ],
   targets: [
+    .plugin(
+      name: "VercelRouterTool",
+      capability: .command(
+        intent: .custom(verb: "vercel-router-tool", description: "Tool used to generate routes for Vercel"),
+        permissions: [.writeToPackageDirectory(reason: "Writes all available routes as output.")]
+      )
+    ),
     .target(
       name: "VercelRuntime",
       dependencies: [

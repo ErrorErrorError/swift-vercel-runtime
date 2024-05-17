@@ -27,6 +27,6 @@ public struct Response: Sendable, Codable {
   }
 }
 
-extension Response {
+public extension Response {
   static let ok = Response(statusCode: .ok)
 }
