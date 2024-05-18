@@ -1,97 +1,57 @@
-import { orderBy } from "lodash";
+import { RouteWithSrc } from "@vercel/routing-utils";
 
-const CatchPriority = {
-  Static: 0,
-  Dynamic: 1,
-  CatchAll: 2,
-  OptionalCatchAll: 2,
+export type RouteOutput = {
+  executableName: string
+  routes: Route[]
 };
 
-interface Route {
-  src: string;
-  dest: string;
-  path: string;
+export type Route = {
+  path: string,
+  segments?: string[],
+  routeType: RouteKind
 }
 
-interface ParsedRoute {
-  src: string;
-  dest: string;
-  path: string;
-  depth: number;
-  catchType: (typeof CatchPriority)[keyof typeof CatchPriority] | null;
+export enum RouteKind {
+  STATIC = 0,
+  DYNAMIC,
+  DYNAMIC_CATCH_ALL,
+  CATCH_ALL,
+  OPTIONAL_CATCH_ALL
 }
 
-export function parseRoute(filepath: string): ParsedRoute {
-  const route = filepath.endsWith('.swift') ? filepath.slice(0, -6) : filepath;
-  const segments = route.split('/');
-  const result = segments.reduce<{
-    catchType: null | number;
-    src: string[];
-    searchParams: URLSearchParams;
-  }>(
-    (acc, segment) => {
-      // Catch all route
+export const parseRoutes = (routes: Route[]): RouteWithSrc[] => {
+  return routes.map(route => {
+    const segments = route.segments ?? [];
+    const src: string[] = [];
+    const searchParams = new URLSearchParams();
+
+    segments.forEach(segment => {
       if (segment.startsWith('[...') && segment.endsWith(']')) {
-        acc.catchType = CatchPriority.CatchAll;
-        acc.src.push('(\\S+)');
-        return acc;
+        src.push('(\\S+)');
+        return;
       }
-
+  
       // Optional catch all route
       if (segment.startsWith('[[...') && segment.endsWith(']]')) {
-        acc.catchType = CatchPriority.OptionalCatchAll;
-        acc.src.push('(/\\S+)?');
-        return acc;
+        src.push('(/\\S+)?');
+        return;
       }
-
+  
       // Dynamic route
       if (segment.startsWith('[') && segment.endsWith(']')) {
         const parameterName = segment.replace('[', '').replace(']', '');
-        acc.catchType = CatchPriority.Dynamic;
-        acc.src.push(`(?<${parameterName}>[^/]+)`);
-        acc.searchParams.set(parameterName, `$${parameterName}`);
-        return acc;
+        src.push(`(?<${parameterName}>[^/]+)`);
+        searchParams.set(parameterName, `$${parameterName}`);
+        return
       }
-
-      // Static routes do not need adding to `routes`.
-      acc.catchType = CatchPriority.Static;
-      acc.src.push(segment);
-
-      return acc;
-    },
-    {
-      catchType: null,
-      src: [],
-      searchParams: new URLSearchParams(),
-    },
-  );
-
-  const searchParams = decodeURIComponent(result.searchParams.toString());
-  const queryString = searchParams !== '' ? `?${searchParams}` : '';
-
-  return {
-    src: `/${result.src.join('/')}`,
-    dest: `/${route}${queryString}`,
-    path: route,
-    depth: segments.length,
-    catchType: result.catchType,
-  };
-}
-
-export function generateRoutes(files: string[]) {
-  const routes = files
-    .map((file) => parseRoute(file))
-    .filter((r) => r.src !== '/api/main');
-
-  const orderedRoutes = orderBy(
-    routes,
-    ['catchType', 'depth'],
-    ['asc', 'desc'],
-  );
-
-  return orderedRoutes.map<Route>((r) => ({
-    src: r.src,
-    dest: r.dest,
-    path: r.path,
-  }));
+      src.push(segment);  
+    });
+    
+    const formalizedParams = decodeURIComponent(searchParams.toString());
+    return {
+      src: `/${src.join('/')}`,
+      dest: `/${segments.join('/')}${formalizedParams !== '' ? `?${formalizedParams}` : ''}`,
+      path: segments.join('/')
+    }
+  });
 }

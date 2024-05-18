@@ -2,21 +2,19 @@ import {
   BuildResultV3,
   BuildV3,
   debug,
-  download,
   FileFsRef,
   getLambdaOptionsFromFunction,
   getProvidedRuntime,
-  glob,
   Lambda,
   ShouldServe,
-  // shouldServe,
 } from '@vercel/build-utils';
 import { installSwiftToolchain } from './lib/swift-toolchain';
 import path from 'node:path';
 import { hasSwiftPM } from './lib/utils';
 import execa from 'execa';
 import { existsSync } from 'node:fs';
-import { generateRoutes } from './lib/routes';
+import { readFile } from 'node:fs/promises';
+import { parseRoutes, RouteOutput } from './lib/routes';
 
 // In order to allow the user to have `main.swift`, we need our
 // `main.swift` to be called something else
@@ -43,10 +41,6 @@ export const build: BuildV3 = async ({
     );
   }
 
-  debug('Creating file system');
-  const downloadedFiles = await download(originalFiles, workPath, meta);
-  const entryPath = downloadedFiles[entrypoint].fsPath;
-
   try {
     await execa(
       'swift',
@@ -62,21 +56,49 @@ export const build: BuildV3 = async ({
     );
     throw err;
   }
+  
+  try {
+    await execa(
+      'swift',
+      ['package', 'vercel-router-tool'],
+      {
+        cwd: workPath,
+        stdin: 'inherit',
+      },
+    );
+  } catch (err) {
+    debug(
+      `Running \`swift package vercel-router-tool\` failed.`,
+    );
+    throw err;
+  }
+  
+  const routesOutputPath = path.join(
+    workPath,
+    '.build',
+    'plugins',
+    'VercelRouterTool',
+    'outputs',
+    'routes.json'
+  )
+  
+  const routesOutputString = await readFile(routesOutputPath, { encoding: 'utf8' });
+  const routesOutput = JSON.parse(routesOutputString) as unknown as RouteOutput;
 
-  const appExecutablePath = path.join(
+  const binPath = path.join(
     workPath,
     '.build',
     BUILDER_DEBUG ? 'debug' : 'release',
-    'App',
+    routesOutput.executableName,
   );
 
-  if (!existsSync(appExecutablePath)) {
+  if (!existsSync(binPath)) {
     throw new Error(
-      'Failed to build `App` executable. Make sure `Package.swift` has `.executableTarget` and the target name is set to `App`.',
+      `Failed to build \`${routesOutput.executableName}\` executable. Make sure \`Package.swift\` has \`.executableTarget()\``
     );
   }
 
-  debug(`Building \`App\` for \`${process.platform}\` completed`);
+  debug(`Building \`${routesOutput.executableName}\` for \`${process.platform}\` completed`);
 
   const lambdaOptions = getLambdaOptionsFromFunction({
     sourceFile: entrypoint,
@@ -84,14 +106,12 @@ export const build: BuildV3 = async ({
   });
 
   const runtime = meta?.isDev ? 'provided' : await getProvidedRuntime();
-  const handlerFiles = await glob('api/**/[!(mM)ain][!(aA)pp]*.swift', workPath);
-  const routes = generateRoutes(Object.keys(handlerFiles));
 
   let output: Lambda = new Lambda({
     files: {
       [HANDLER_FILENAME]: new FileFsRef({
         mode: 0o755,
-        fsPath: appExecutablePath,
+        fsPath: binPath,
       }),
     },
     handler: HANDLER_FILENAME,
@@ -101,10 +121,9 @@ export const build: BuildV3 = async ({
     // experimentalAllowBundling: true
   });
 
-  return { 
-    output: output,
-    routes: routes.map((src, dest) => ({ src, dest }))
-  };
+  const routes = parseRoutes(routesOutput.routes);
+
+  return { output, routes };
 };
 
 export const shouldServe: ShouldServe = async ({
@@ -114,5 +133,3 @@ export const shouldServe: ShouldServe = async ({
   debug(`Requested ${requestPath} for ${entrypoint}`);
   return Promise.resolve(entrypoint === 'api/main');
 };
-
-// export { shouldServe };

@@ -6,24 +6,30 @@
 //
 //
 
-public struct RouteMetadata: Equatable, Sendable, Encodable {
-  static let excludeFromRoutes = ["main.swift", "app.swift", "Package.swift"]
+public struct RoutesOutput: Encodable {
+  var executableName: String
+  var routes: [RouteMetadata] = []
+}
 
+public struct RouteMetadata: Equatable, Sendable, Encodable {
   public let path: String
   public let segments: [String]?
   public let routeType: RouteKind
 
   public init?(path: String) {
     let lowercased = path.lowercased()
-    guard lowercased.hasSuffix(".swift"), 
-          Self.excludeFromRoutes.allSatisfy({ !lowercased.hasSuffix($0) }) else {
+    guard lowercased.hasSuffix(".swift"),
+          path.lowercased() != "main.swift",
+          path.lowercased() != "app.swift",
+          path != "Package.swift"
+    else {
       return nil
     }
-
+    
     let path = path.removeSuffix(".swift")
     self.routeType = RouteKind(path: path)
     self.path = path
-    self.segments = path.split(whereSeparator: { $0 == "/" }).map(String.init)
+    self.segments = path.split(whereSeparator: { $0 == "/" || $0 == "\\" }).map(String.init)
   }
 }
 

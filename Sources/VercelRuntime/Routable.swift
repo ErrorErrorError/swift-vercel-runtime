@@ -30,7 +30,7 @@ public extension Routable {
 
 extension Routable {
   var basePath: String {
-    if let indexRange = filePath.lastIndex(of: "/") ?? filePath.lastIndex(of: "\\") {
+    if let indexRange = filePath.lastIndex(of: "/") {
       String(filePath[..<indexRange])
     } else {
       filePath
@@ -42,7 +42,7 @@ extension Routable {
 
     for routeType in self.routes {
       let route = routeType.init()
-      let path = route.routePath(base: basePath)
+      let path = route(base: basePath)
       if expectedPath == path {
         return route
       }

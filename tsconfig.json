@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2016",
-    "types": ["node", "jest"]
+    "types": ["node", "jest"],
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "examples"]

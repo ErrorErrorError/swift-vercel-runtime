@@ -30,8 +30,7 @@ let package = Package.init(
     .plugin(
       name: "VercelRouterTool",
       capability: .command(
-        intent: .custom(verb: "vercel-router-tool", description: "Tool used to generate routes for Vercel"),
-        permissions: [.writeToPackageDirectory(reason: "Writes all available routes as output.")]
+        intent: .custom(verb: "vercel-router-tool", description: "Tool used to generate routes for Vercel Runtime")
       )
     ),
     .target(
@@ -40,6 +39,12 @@ let package = Package.init(
         "VercelMacros",
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         .product(name: "HTTPTypes", package: "swift-http-types")
+      ]
+    ),
+    .testTarget(
+      name: "VercelRuntimeTests",
+      dependencies: [
+        "VercelRuntime"
       ]
     ),
     .macro(
@@ -54,12 +59,6 @@ let package = Package.init(
       dependencies: [
         "VercelMacros",
         .product(name: "MacroTesting", package: "swift-macro-testing")
-      ]
-    ),
-    .testTarget(
-      name: "VercelRuntimeTests",
-      dependencies: [
-        "VercelRuntime"
       ]
     )
   ]

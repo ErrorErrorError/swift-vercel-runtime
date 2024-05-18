@@ -1,12 +1,12 @@
 {
-  "name": "vercel-swift",
+  "name": "swift-vercel-runtime",
   "version": "0.0.1",
   "description": "Swift runtime for Vercel Functions.",
   "keywords": [],
-  "homepage": "https://github.com/errorerrorerror/vercel-swift",
+  "homepage": "https://github.com/errorerrorerror/swift-vercel-runtime",
   "repository": {
     "type": "git",
-    "url": "https://github.com/errorerrorerror/vercel-swift.git"
+    "url": "https://github.com/errorerrorerror/swift-vercel-runtime.git"
   },
   "license": "MIT",
   "author": "errorerrorerror",

@@ -1,6 +1,5 @@
 import VercelRuntime
 
-@main
 @Routable
 struct App: Routable {
   var routes: [VercelRuntime.Route.Type] = [
@@ -11,3 +10,5 @@ struct App: Routable {
     OptionalCatchAllPostIDRoute.self
   ]
 }
+
+try App.main()

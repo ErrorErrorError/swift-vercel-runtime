@@ -14,8 +14,11 @@ public protocol Route {
 }
 
 extension Route {
-  func routePath(base path: String) -> String {
-    String(filePath.dropLast(6))
-      .replacingOccurrences(of: path, with: "")
+  func callAsFunction(base path: String) -> String {
+    String(filePath.dropLast(6).trimmingPrefix(path))
+  }
+  
+  func callAsFunction(_ request: Request) async throws -> Response {
+    try await resolve(request)
   }
 }

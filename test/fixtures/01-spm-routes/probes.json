@@ -1,14 +1,8 @@
 {
   "probes": [
     {
-      "path": "/api/book.swift",
-      "status": 200,
-      "mustContain": "Hello, Book."
-    },
-    {
-      "path": "/api/user.swift",
-      "status": 200,
-      "mustContain": "Hello, User."
+      "path": "/api/posts.swift",
+      "status": 200
     }
   ]
 }

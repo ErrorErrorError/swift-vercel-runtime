@@ -35,7 +35,7 @@ extension VercelRuntime: EventLoopLambdaHandler {
       let payload = try JSONDecoder().decode(VercelEvent.Payload.self, from: data)
       let request = Request(payload, in: context)
       let route = try routable.resolveRoute(path: payload.path)
-      return try await route.resolve(request)
+      return try await route(request)
     }
   }
 }
